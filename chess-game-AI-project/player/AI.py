@@ -410,7 +410,7 @@ class AI:
                     # Check if there are pawns in front of the king for protection
                     for dy in [-1, 0, 1]:
                         if y+dy in range(8) and (not gametiles[y+dy][x].pieceonTile or gametiles[y+dy][x].pieceonTile.tostring().lower() != 'p'):
-                            value -= 200 if piece.islower() else 100
+                            value -= 100 if piece.islower() else 100
 
         return value
         
