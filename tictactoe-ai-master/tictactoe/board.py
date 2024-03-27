@@ -200,46 +200,6 @@ class Board:
                 else:
                     return rows[1]
 
-    def next_move_leads_to_losing(self, winner = False, gui = True) -> list[Square]:
-        """Check for connected tiles
-
-        Returns:
-            list[Square]: List of connected squares
-        """
-
-        # Check for all connection occurences
-        rows = []
-        for row in self.win_conditions:
-            checklist = []
-            for square in row:
-                if self.is_empty(square):
-                    continue
-                checklist.append(self.square_value(square))
-            if len(checklist) == self.size and len(set(checklist)) == 1:
-                rows.append(row)
-
-        # If there are more than 1 occurence, return the occurance 
-        # of the current turn to declare the final winner and show gui
-        # the winning line
-        # otherwise return the occurance of the opponent to see indicate
-        # that he can win after I have connected a line
-
-        if len(rows) == 0:
-            return False
-        elif len(rows) == 1:
-            return False
-        else:
-            if winner or gui:
-                if self.turn == self.square_value(rows[0][0]):
-                    return True
-                else:
-                    return False
-            else:
-                if self.turn == self.square_value(rows[0][0]):
-                    return False
-                else:
-                    return True
-
     def is_draw(self) -> bool:
         """Check for draw
 
