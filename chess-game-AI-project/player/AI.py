@@ -251,6 +251,7 @@ class AI:
 
 
     def calculateb(self,gametiles):
+            def calculateb(self,gametiles):
         # how valueable are pieces at each position
 
         p = [
@@ -319,47 +320,72 @@ class AI:
             [2, 3, 1, 0, 0, 1, 3, 2]
         ]
 
+        
         value=0
+        # Central squares get a bonus for being occupied or attacked
+        central_squares = [(3, 3), (3, 4), (4, 3), (4, 4)]
+        central_control_bonus = 20  # Adjust based on testing
+
         for x in range(8):
             for y in range(8):
-                    if gametiles[y][x].pieceonTile.tostring()=='P':
-                        value=value-100-p[y][x]
+                tile = gametiles[y][x]
+                if tile.pieceonTile:
+                    piece = tile.pieceonTile.tostring()
+                    # Base value adjustment using piece-square tables
+                    if piece == 'P': value -= 100 + p[y][x]
+                    elif piece == 'N': value -= 350 + n[y][x]
+                    elif piece == 'B': value -= 350 + b[y][x]
+                    elif piece == 'R': value -= 525 + r[y][x]
+                    elif piece == 'Q': value -= 1000 + q[y][x]
+                    elif piece == 'K': value -= 10000 + k[y][x]
+                    elif piece == 'p': value += 100 + p[y][x]
+                    elif piece == 'n': value += 350 + n[y][x]
+                    elif piece == 'b': value += 350 + b[y][x]
+                    elif piece == 'r': value += 525 + r[y][x]
+                    elif piece == 'q': value += 1000 + q[y][x]
+                    elif piece == 'k': value += 10000 + k[y][x]
 
-                    if gametiles[y][x].pieceonTile.tostring()=='N':
-                        value=value-350-n[y][x]
+                    # Simplified attack/defense evaluation
+                    for dx in [-1, 0, 1]:
+                        for dy in [-1, 0, 1]:
+                            if not (dx == 0 and dy == 0) and 0 <= x + dx < 8 and 0 <= y + dy < 8:
+                                adjacent = gametiles[y + dy][x + dx]
+                                if adjacent.pieceonTile:
+                                    adjacent_piece = adjacent.pieceonTile.tostring()
+                                    if piece.islower() and adjacent_piece.isupper():  # Attack
+                                        value += 10  # Simple bonus for attacking an opponent's piece
+                                    elif piece.isupper() and adjacent_piece.islower():  # Attack
+                                        value += 10
+                                    elif piece.islower() == adjacent_piece.islower():  # Defense
+                                        value += 5  # Smaller bonus for defending your own piece
 
-                    if gametiles[y][x].pieceonTile.tostring()=='B':
-                        value=value-350-b[y][x]
+                    # Central control bonus
+                    if (x, y) in central_squares:
+                        value += central_control_bonus if piece.islower() else -central_control_bonus
+                    # Encourage control of the center
+                if (x, y) in [(3, 3), (3, 4), (4, 3), (4, 4)]:
+                    value += 20 if piece.islower() else -20
 
-                    if gametiles[y][x].pieceonTile.tostring()=='R':
-                        value=value-525-r[y][x]
+                # Evaluate pawn structure (simple)
+                if piece.lower() == 'p':
+                    # Penalize isolated pawns
+                    if (x == 0 or not gametiles[y][x-1].pieceonTile or gametiles[y][x-1].pieceonTile.tostring().lower() != 'p') and \
+                       (x == 7 or not gametiles[y][x+1].pieceonTile or gametiles[y][x+1].pieceonTile.tostring().lower() != 'p'):
+                        value -= 50 if piece.islower() else 50
+                    # Penalize doubled pawns
+                    for i in range(y+1, 8):
+                        if gametiles[i][x].pieceonTile and gametiles[i][x].pieceonTile.tostring().lower() == 'p':
+                            value -= 50 if piece.islower() else 50
+                            break
 
-                    if gametiles[y][x].pieceonTile.tostring()=='Q':
-                        value=value-1000-q[y][x]
-
-                    if gametiles[y][x].pieceonTile.tostring()=='K':
-                        value=value-10000-k[y][x]
-
-                    if gametiles[y][x].pieceonTile.tostring()=='p':
-                        value=value+100+p[y][x]
-
-                    if gametiles[y][x].pieceonTile.tostring()=='n':
-                        value=value+350+n[y][x]
-
-                    if gametiles[y][x].pieceonTile.tostring()=='b':
-                        value=value+350+b[y][x]
-
-                    if gametiles[y][x].pieceonTile.tostring()=='r':
-                        value=value+525+r[y][x]
-
-                    if gametiles[y][x].pieceonTile.tostring()=='q':
-                        value=value+1000+q[y][x]
-
-                    if gametiles[y][x].pieceonTile.tostring()=='k':
-                        value=value+10000+k[y][x]
+                # King safety
+                if piece.lower() == 'k':
+                    # Check if there are pawns in front of the king for protection
+                    for dy in [-1, 0, 1]:
+                        if y+dy in range(8) and (not gametiles[y+dy][x].pieceonTile or gametiles[y+dy][x].pieceonTile.tostring().lower() != 'p'):
+                            value -= 100 if piece.islower() else 100
 
         return value
-
 
     def move(self,gametiles,y,x,n,m):
         promotion=False
