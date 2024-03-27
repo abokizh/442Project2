@@ -160,12 +160,15 @@ class Board:
         """
         return self.table[square] == Symbol.EMPTY
 
-    def get_connection(self) -> list[Square]:
+    def get_connection(self, winner = False, gui = True) -> list[Square]:
         """Check for connected tiles
 
         Returns:
             list[Square]: List of connected squares
         """
+
+        # Check for all connection occurences
+        rows = []
         for row in self.win_conditions:
             checklist = []
             for square in row:
@@ -173,8 +176,69 @@ class Board:
                     continue
                 checklist.append(self.square_value(square))
             if len(checklist) == self.size and len(set(checklist)) == 1:
-                return row
-        return []
+                rows.append(row)
+
+        # If there are more than 1 occurence, return the occurance 
+        # of the current turn to declare the final winner and show gui
+        # the winning line
+        # otherwise return the occurance of the opponent to see indicate
+        # that he can win after I have connected a line
+
+        if len(rows) == 0:
+            return []
+        elif len(rows) == 1:
+            return rows[0]
+        else:
+            if winner or gui:
+                if self.turn == self.square_value(rows[0][0]):
+                    return rows[1]
+                else:
+                    return rows[0]
+            else:
+                if self.turn == self.square_value(rows[0][0]):
+                    return rows[0]
+                else:
+                    return rows[1]
+
+    def next_move_leads_to_losing(self, winner = False, gui = True) -> list[Square]:
+        """Check for connected tiles
+
+        Returns:
+            list[Square]: List of connected squares
+        """
+
+        # Check for all connection occurences
+        rows = []
+        for row in self.win_conditions:
+            checklist = []
+            for square in row:
+                if self.is_empty(square):
+                    continue
+                checklist.append(self.square_value(square))
+            if len(checklist) == self.size and len(set(checklist)) == 1:
+                rows.append(row)
+
+        # If there are more than 1 occurence, return the occurance 
+        # of the current turn to declare the final winner and show gui
+        # the winning line
+        # otherwise return the occurance of the opponent to see indicate
+        # that he can win after I have connected a line
+
+        if len(rows) == 0:
+            return False
+        elif len(rows) == 1:
+            return False
+        else:
+            if winner or gui:
+                if self.turn == self.square_value(rows[0][0]):
+                    return True
+                else:
+                    return False
+            else:
+                if self.turn == self.square_value(rows[0][0]):
+                    return False
+                else:
+                    return True
 
     def is_draw(self) -> bool:
         """Check for draw
@@ -182,23 +246,53 @@ class Board:
         Returns:
             bool: True if board is filled and no connection
         """
-        if len(self.empty_squares) == 0 and len(self.get_connection()) == 0:
+        if len(self.empty_squares) == 0 and len(self.get_connection(gui = False)) == 0:
             return True
         return False
 
-    def winner(self) -> Optional[Symbol]:
-        """Get the winner of the match
+
+    def final_move(self, gui = False) -> bool:
+        """ After oppenent has made one line, check if 
+        I have a move that can make another line and vice versa
+        
+        Returns:
+            bool: True if I/opponent can win in the next move, False otherwise.
+        """
+        connection = self.get_connection(gui = gui)
+        if len(connection) > 0 and self.turn == self.square_value(connection[0]):
+            return False 
+        for square in self.empty_squares:
+            self.push(square, self.turn)
+            if self.winnerHelper() == self.turn:
+                self.undo(square)
+                return True
+            self.undo(square)
+        return False
+
+    def winnerHelper(self, winner = False) -> Optional[Symbol]:
+        """ Get the temporary winner
 
         Returns:
             Optional[Symbol]: Symbol of connected tiles if exists
         """
-        connection = self.get_connection()
+        connection = self.get_connection(winner = winner, gui = False)
         if len(connection) == 0:
             return None
         elif self.square_value(connection[0]) == Symbol.CIRCLE:
             return Symbol.CIRCLE
         else:
             return Symbol.CROSS
+
+
+
+    def winner(self) -> Optional[Symbol]:
+        """
+        Override the check for the opponent's potential win in the next move.
+        """
+        current_winner = self.winnerHelper(True)
+        if current_winner and not self.final_move():
+            return current_winner
+        return None
 
     def is_gameover(self) -> bool:
         """Check for gameover
