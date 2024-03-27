@@ -251,7 +251,6 @@ class AI:
 
 
     def calculateb(self,gametiles):
-            def calculateb(self,gametiles):
         # how valueable are pieces at each position
 
         p = [
@@ -322,6 +321,9 @@ class AI:
 
         
         value=0
+        piece_count=0 # Count the total number of pieces for endgame 
+        opponent_king_position = None  # Track the opponent king's position
+
         # Central squares get a bonus for being occupied or attacked
         central_squares = [(3, 3), (3, 4), (4, 3), (4, 4)]
         central_control_bonus = 20  # Adjust based on testing
@@ -331,6 +333,7 @@ class AI:
                 tile = gametiles[y][x]
                 if tile.pieceonTile:
                     piece = tile.pieceonTile.tostring()
+                    piece_count += 1  # Increment piece count
                     # Base value adjustment using piece-square tables
                     if piece == 'P': value -= 100 + p[y][x]
                     elif piece == 'N': value -= 350 + n[y][x]
@@ -353,11 +356,11 @@ class AI:
                                 if adjacent.pieceonTile:
                                     adjacent_piece = adjacent.pieceonTile.tostring()
                                     if piece.islower() and adjacent_piece.isupper():  # Attack
-                                        value += 10  # Simple bonus for attacking an opponent's piece
+                                        value += 22  # Simple bonus for attacking an opponent's piece
                                     elif piece.isupper() and adjacent_piece.islower():  # Attack
-                                        value += 10
+                                        value += 22
                                     elif piece.islower() == adjacent_piece.islower():  # Defense
-                                        value += 5  # Smaller bonus for defending your own piece
+                                        value += 18  # Smaller bonus for defending your own piece
 
                     # Central control bonus
                     if (x, y) in central_squares:
@@ -366,6 +369,30 @@ class AI:
                 if (x, y) in [(3, 3), (3, 4), (4, 3), (4, 4)]:
                     value += 20 if piece.islower() else -20
 
+                    # Identify opponent king's position
+                if (piece.islower() and piece == 'K') or (piece.isupper() and piece == 'k'):
+                    opponent_king_position = (x, y)
+
+                # Check squares around the opponent's king for attack bonuses
+                if opponent_king_position:
+                    king_x, king_y = opponent_king_position
+                    if max(abs(king_x - x), abs(king_y - y)) == 1:  # Squares adjacent to the king
+                        value += 50 if piece.islower() else -50  # Higher bonus for attacking near the opponent's king
+
+                # Promotion Potential for Pawns
+                if piece.lower() == 'p':
+                    advancement_bonus = (y if piece.islower() else 7 - y) * 10
+                    value += advancement_bonus if piece.islower() else -advancement_bonus
+
+                    if piece.lower() == 'k' and piece_count <= 12:  # Assuming 12 pieces as an arbitrary threshold for the endgame
+                        # Encourage the king to move towards the center in the endgame
+                        king_endgame_bonus = 10 * (4 - max(abs(4-x), abs(4-y)))
+                        value += king_endgame_bonus if piece.islower() else -king_endgame_bonus
+                    # Pawn Advancement
+                    if piece.lower() == 'p':
+                        # Increase the value for pawns advancing towards the opposite side
+                        pawn_advancement_bonus = (y if piece.islower() else 7-y) * 5
+                        value += pawn_advancement_bonus if piece.islower() else -pawn_advancement_bonus
                 # Evaluate pawn structure (simple)
                 if piece.lower() == 'p':
                     # Penalize isolated pawns
@@ -375,7 +402,7 @@ class AI:
                     # Penalize doubled pawns
                     for i in range(y+1, 8):
                         if gametiles[i][x].pieceonTile and gametiles[i][x].pieceonTile.tostring().lower() == 'p':
-                            value -= 50 if piece.islower() else 50
+                            value -= 30 if piece.islower() else 50
                             break
 
                 # King safety
@@ -383,10 +410,10 @@ class AI:
                     # Check if there are pawns in front of the king for protection
                     for dy in [-1, 0, 1]:
                         if y+dy in range(8) and (not gametiles[y+dy][x].pieceonTile or gametiles[y+dy][x].pieceonTile.tostring().lower() != 'p'):
-                            value -= 100 if piece.islower() else 100
+                            value -= 200 if piece.islower() else 100
 
         return value
-
+        
     def move(self,gametiles,y,x,n,m):
         promotion=False
         if gametiles[y][x].pieceonTile.tostring()=='K' or gametiles[y][x].pieceonTile.tostring()=='R':
